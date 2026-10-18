@@ -23,7 +23,8 @@ RUN pip install --no-cache-dir --upgrade pip \
 COPY . .
 
 # 收集静态文件（whitenoise 提供）
-RUN python manage.py collectstatic --noinput
+# 构建阶段还没有真实密钥，collectstatic 不依赖它，给一个仅用于构建的占位值即可
+RUN SECRET_KEY=build-only-dummy-not-used-at-runtime python manage.py collectstatic --noinput
 
 EXPOSE 8000
 
