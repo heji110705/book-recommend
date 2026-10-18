@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}兴趣引导 · 墨韵书荐{% endblock %}
+{% block content %}
+<div class="container" style="max-width:1080px;">
+  <div class="text-center mt-4 mb-3">
+    <div style="font-size:2.2rem;">📚</div>
+    <h2 class="mb-1">告诉我们你喜欢读什么</h2>
+    <p class="text-muted mb-0">选择 3～5 个你感兴趣的分类（可多选），我们将据此为你冷启动生成第一份书单。<br>
+      之后你评分越多，推荐会越懂你。</p>
+  </div>
+
+  <form method="post" id="onboardForm">
+    {% csrf_token %}
+    <div class="row g-3" id="catGrid">
+      {% for cat in cats %}
+      <div class="col-6 col-md-4 col-lg-3">
+        <label class="onboard-card {% if cat.checked %}sel{% endif %}">
+          <input type="checkbox" name="categories" value="{{ cat.name }}"
+                 class="form-check-input cat-check" {% if cat.checked %}checked{% endif %}
+                 style="position:absolute;opacity:0;">
+          <div class="onboard-head">
+            <span class="onboard-name">{{ cat.name }}</span>
+            <span class="onboard-tick">✓</span>
+          </div>
+          <div class="onboard-covers">
+            {% for b in cat.books %}
+              {% if b.cover %}<img src="{{ b.cover.url }}" alt="{{ b.title }}" loading="lazy">
+              {% else %}<span class="onboard-ph">{{ b.title|first }}</span>{% endif %}
+            {% endfor %}
+          </div>
+        </label>
+      </div>
+      {% endfor %}
+    </div>
+
+    <div class="text-center mt-4 mb-5">
+      <button type="submit" class="btn btn-brand btn-lg" id="submitBtn" style="min-width:240px;">生成我的专属书单 →</button>
+      <div class="text-muted small mt-2">已选 <b id="selCount" style="color:var(--brand);">0</b> 个分类</div>
+    </div>
+  </form>
+</div>
+
+<style>
+.onboard-card{
+  display:block;border:2px solid #e6e9e6;border-radius:14px;padding:12px;cursor:pointer;
+  background:#fff;transition:all .15s;height:100%;position:relative;
+}
+.onboard-card:hover{border-color:#9fd6bf;box-shadow:0 4px 14px rgba(10,143,91,.10);}
+.onboard-card.sel{border-color:var(--brand);background:var(--brand-light);box-shadow:0 4px 14px rgba(10,143,91,.16);}
+.onboard-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+.onboard-name{font-weight:700;font-size:1rem;}
+.onboard-tick{width:22px;height:22px;border-radius:50%;border:2px solid #c8cec8;color:#fff;
+  display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;transition:all .15s;}
+.onboard-card.sel .onboard-tick{background:var(--brand);border-color:var(--brand);}
+.onboard-covers{display:flex;gap:6px;}
+.onboard-covers img,.onboard-ph{
+  flex:1;aspect-ratio:2/3;object-fit:cover;border-radius:5px;box-shadow:0 2px 6px rgba(0,0,0,.12);
+  background:#eef0ee;display:flex;align-items:center;justify-content:center;color:#9aa29a;font-size:1.1rem;
+}
+</style>
+<script>
+function refresh(){
+  var n=0;
+  document.querySelectorAll('.cat-check').forEach(function(cb){
+    var card=cb.closest('.onboard-card');
+    if(cb.checked){card.classList.add('sel');n++;}else{card.classList.remove('sel');}
+  });
+  document.getElementById('selCount').textContent=n;
+}
+document.querySelectorAll('.cat-check').forEach(function(cb){
+  cb.addEventListener('change',refresh);
+});
+refresh();
+</script>
+{% endblock %}

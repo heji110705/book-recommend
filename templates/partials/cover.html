@@ -1,0 +1,4 @@
+<a class="cover-frame" href="{% url 'book_detail' book.id %}" title="{{ book.title }}">
+  <span class="cover-fallback">{{ book.title|first }}</span>
+  {% if book.cover %}<img src="{{ book.cover.url }}" alt="{{ book.title }}" loading="lazy" onerror="this.remove();">{% endif %}
+</a>

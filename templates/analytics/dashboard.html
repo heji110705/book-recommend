@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}数据分析看板 · 墨韵书荐{% endblock %}
+
+{% block content %}
+<div class="section-bar"><h2>数据分析与可视化看板</h2></div>
+<p class="text-muted" style="margin-top:-6px;">数据来自豆瓣图书画像、系统评分与读者评论，覆盖 TF-IDF + LDA 文本挖掘、评论情感分析与推荐算法离线评估。</p>
+
+<div class="row mb-2 g-3">
+  <div class="col-6 col-md"><div class="stat-card"><div class="num">{{ stats.books }}</div><div class="label">馆藏图书</div></div></div>
+  <div class="col-6 col-md"><div class="stat-card"><div class="num">{{ stats.users }}</div><div class="label">注册用户</div></div></div>
+  <div class="col-6 col-md"><div class="stat-card"><div class="num">{{ stats.ratings }}</div><div class="label">用户评分</div></div></div>
+  <div class="col-6 col-md"><div class="stat-card"><div class="num">{{ stats.comments }}</div><div class="label">读者评论</div></div></div>
+  <div class="col-12 col-md"><div class="stat-card"><div class="num">{{ stats.avg_rating }}</div><div class="label">平均评分（满分10）</div></div></div>
+</div>
+
+<!-- 推荐算法评估 -->
+<div class="card-box">
+  <div class="sec-title"><span class="dot">▎</span>推荐算法离线评估（训练集 / 测试集 = 8:2，5 个随机切分种子均值）</div>
+  <div class="row">
+    <div class="col-lg-6"><div id="chart_rmse" class="chart" style="height:320px;"></div></div>
+    <div class="col-lg-6"><div id="chart_pr" class="chart" style="height:320px;"></div></div>
+    <div class="col-lg-12"><div id="chart_div" class="chart" style="height:340px;"></div></div>
+  </div>
+  <p class="text-muted small mb-0 mt-2">RMSE/MAE 越小越好；Precision/Recall 越大越好；多样性（避免同质内容）、新颖度（覆盖长尾）、覆盖率（推荐触达的书目占比）越均衡越好。混合推荐在准确率最优的同时保持了较好的多样性与覆盖。</p>
+</div>
+
+<div class="row g-0">
+  <div class="col-lg-6"><div class="chart-box"><h6 class="fw-bold">馆藏图书分类分布</h6><div id="chart_cat" class="chart"></div></div></div>
+  <div class="col-lg-6"><div class="chart-box"><h6 class="fw-bold">读者评论情感极性占比</h6><div id="chart_polarity" class="chart"></div></div></div>
+  <div class="col-lg-6"><div class="chart-box"><h6 class="fw-bold">各分类平均分与好评率</h6><div id="chart_catscore" class="chart"></div></div></div>
+  <div class="col-lg-6"><div class="chart-box"><h6 class="fw-bold">用户评分分布</h6><div id="chart_hist" class="chart"></div></div></div>
+  <div class="col-lg-6"><div class="chart-box"><h6 class="fw-bold">图书出版年份趋势</h6><div id="chart_year" class="chart"></div></div></div>
+  <div class="col-lg-6"><div class="chart-box"><h6 class="fw-bold">热门出版社 Top10</h6><div id="chart_pub" class="chart"></div></div></div>
+  <div class="col-12"><div class="chart-box"><h6 class="fw-bold">图书标签词云</h6><div id="chart_wordcloud" class="chart" style="height:380px;"></div></div></div>
+</div>
+
+<div class="chart-box">
+  <h6 class="fw-bold">LDA 主题模型 —— 图书内容主题聚类</h6>
+  <div id="topics" class="row"></div>
+</div>
+
+<div class="chart-box">
+  <h6 class="fw-bold">高分图书 Top10</h6>
+  <table class="table table-sm align-middle mb-0">
+    <thead><tr><th>排名</th><th>书名</th><th>作者</th><th>分类</th><th>平均分</th><th>评分人数</th></tr></thead>
+    <tbody>
+      {% for b in top_books %}
+      <tr>
+        <td><span class="rank-no" style="background:var(--brand-light);color:var(--brand-dark);">{{ forloop.counter }}</span></td>
+        <td><a href="{% url 'book_detail' b.id %}">{{ b.title }}</a></td>
+        <td class="small">{{ b.author }}</td>
+        <td><span class="tag-badge">{{ b.category }}</span></td>
+        <td><span class="text-brand fw-bold">{{ b.rating_avg }}</span></td>
+        <td class="small">{{ b.rating_count }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'vendor/echarts.min.js' %}?v=20261018"></script>
+<script src="{% static 'vendor/echarts-wordcloud.min.js' %}?v=20261018"></script>
+<script>
+var DATA = {{ chart_data|safe }};
+var brand = '#0a8f5b', brand2 = '#54c79a', accent = '#e09015', blue = '#2f72c4';
+
+function init(id){ return echarts.init(document.getElementById(id)); }
+var EVAL = DATA.evaluation || {};
+
+// 评估图
+if (EVAL.rating) {
+  var order = ['baseline_global','baseline_item','usercf','itemcf','svd','content','hybrid'];
+  var labels = {'baseline_global':'全局均值','baseline_item':'物品均值','usercf':'UserCF','itemcf':'ItemCF','svd':'FunkSVD','content':'内容','hybrid':'混合'};
+  var keys = order.filter(function(k){return EVAL.rating[k];});
+  init('chart_rmse').setOption({
+    title:{text:'各算法评分预测误差（RMSE / MAE）', textStyle:{fontSize:14}},
+    tooltip:{trigger:'axis'},
+    legend:{bottom:0},
+    grid:{left:50,right:20,top:45,bottom:55},
+    xAxis:{type:'category', data:keys.map(function(k){return labels[k];}), axisLabel:{fontSize:10}},
+    yAxis:{type:'value', name:'误差'},
+    series:[
+      {name:'RMSE', type:'bar', data:keys.map(function(k){return EVAL.rating[k].rmse;}), itemStyle:{color:blue},
+        label:{show:true,position:'top',fontSize:9,formatter:function(p){return p.value.toFixed(2);}}},
+      {name:'MAE', type:'bar', data:keys.map(function(k){return EVAL.rating[k].mae;}), itemStyle:{color:accent}}
+    ]
+  });
+}
+if (EVAL.topn) {
+  var ak = ['usercf','itemcf','svd','content','hybrid'];
+  init('chart_pr').setOption({
+    title:{text:'Top-' + (EVAL.top_n||15) + ' 推荐准确率 / 召回率', textStyle:{fontSize:14}},
+    tooltip:{trigger:'axis'},
+    legend:{bottom:0},
+    grid:{left:50,right:20,top:45,bottom:55},
+    xAxis:{type:'category', data:ak.map(function(k){return labels[k];})},
+    yAxis:{type:'value', name:'指标值'},
+    series:[
+      {name:'Precision@N', type:'bar', data:ak.map(function(k){return +(EVAL.topn[k].precision*100).toFixed(2);}), itemStyle:{color:brand},
+        label:{show:true,position:'top',fontSize:9,formatter:'{c}%'}},
+      {name:'Recall@N', type:'bar', data:ak.map(function(k){return +(EVAL.topn[k].recall*100).toFixed(2);}), itemStyle:{color:brand2}}
+    ]
+  });
+}
+// 多样性 / 新颖度 / 覆盖率
+if (EVAL.topn && EVAL.topn.hybrid && EVAL.topn.hybrid.diversity !== undefined) {
+  var ak2 = ['usercf','itemcf','svd','content','hybrid'];
+  init('chart_div').setOption({
+    title:{text:'推荐多样性 / 新颖度 / 目录覆盖率', textStyle:{fontSize:14}},
+    tooltip:{trigger:'axis'},
+    legend:{bottom:0, data:['多样性','覆盖率','新颖度(自信息)']},
+    grid:{left:55,right:55,top:45,bottom:55},
+    xAxis:{type:'category', data:ak2.map(function(k){return labels[k];})},
+    yAxis:[
+      {type:'value', name:'多样性/覆盖率', min:0, max:1, axisLabel:{formatter:function(v){return (v*100).toFixed(0)+'%';}}},
+      {type:'value', name:'新颖度', min:0}
+    ],
+    series:[
+      {name:'多样性', type:'bar', data:ak2.map(function(k){return +EVAL.topn[k].diversity.toFixed(3);}), itemStyle:{color:'#8a63d2'},
+        label:{show:true,position:'top',fontSize:9}},
+      {name:'覆盖率', type:'bar', data:ak2.map(function(k){return +EVAL.topn[k].coverage.toFixed(3);}), itemStyle:{color:'#3aa8b8'},
+        label:{show:true,position:'top',fontSize:9}},
+      {name:'新颖度(自信息)', type:'line', yAxisIndex:1, data:ak2.map(function(k){return +EVAL.topn[k].novelty.toFixed(3);}),
+        itemStyle:{color:accent}, symbolSize:8, lineStyle:{width:2.5},
+        label:{show:true,position:'top',fontSize:9}}
+    ]
+  });
+}
+
+// 分类饼图
+init('chart_cat').setOption({
+  tooltip:{trigger:'item'},
+  legend:{type:'scroll', bottom:0, textStyle:{fontSize:11}},
+  series:[{type:'pie', radius:['38%','66%'], center:['50%','45%'],
+    data: DATA.categories.map(function(c,i){return {name:c, value:DATA.cat_counts[i]};}),
+    color:['#0a8f5b','#54c79a','#2f72c4','#e09015','#8a63d2','#e0533d','#3aa8b8','#b8860b','#6a8caf','#4caf50','#ef7b4b','#9c5a8f'],
+    label:{formatter:'{b}: {c}', fontSize:11}}]
+});
+
+// 情感饼图
+init('chart_polarity').setOption({
+  tooltip:{trigger:'item', formatter:'{b}: {c} ({d}%)'},
+  legend:{bottom:0},
+  series:[{type:'pie', radius:['40%','66%'], center:['50%','45%'],
+    data:[
+      {name:'好评', value:DATA.polarity['好评'], itemStyle:{color:'#1f9d55'}},
+      {name:'中评', value:DATA.polarity['中评'], itemStyle:{color:'#a7a7a7'}},
+      {name:'差评', value:DATA.polarity['差评'], itemStyle:{color:'#e0533d'}}
+    ],
+    label:{formatter:'{b}\n{d}%'}}]
+});
+
+// 各分类平均分与好评率
+init('chart_catscore').setOption({
+  tooltip:{trigger:'axis'},
+  legend:{bottom:0},
+  grid:{left:50, right:55, top:30, bottom:75},
+  xAxis:{type:'category', data:DATA.categories, axisLabel:{rotate:40, fontSize:10}},
+  yAxis:[{type:'value', name:'平均分', min:0, max:10},
+         {type:'value', name:'好评率(%)', min:0, max:100}],
+  series:[
+    {name:'平均分', type:'bar', data:DATA.cat_rating, itemStyle:{color:brand}},
+    {name:'好评率', type:'line', yAxisIndex:1, data:DATA.cat_pos, itemStyle:{color:accent}}
+  ]
+});
+
+// 评分分布
+init('chart_hist').setOption({
+  tooltip:{trigger:'axis'},
+  grid:{left:50,right:20,top:20,bottom:40},
+  xAxis:{type:'category', data:DATA.hist_labels, name:'分数区间'},
+  yAxis:{type:'value', name:'评分条数'},
+  series:[{type:'bar', data:DATA.hist, itemStyle:{color:brand},
+    label:{show:true, position:'top', fontSize:10}}]
+});
+
+// 年份趋势
+init('chart_year').setOption({
+  tooltip:{trigger:'axis'},
+  grid:{left:50,right:20,top:20,bottom:40},
+  xAxis:{type:'category', data:DATA.years},
+  yAxis:{type:'value', name:'出版数量'},
+  series:[{type:'line', data:DATA.year_counts, smooth:true, areaStyle:{opacity:.25},
+    itemStyle:{color:brand}}]
+});
+
+// 出版社
+init('chart_pub').setOption({
+  tooltip:{trigger:'axis'},
+  grid:{left:150,right:34,top:20,bottom:30},
+  xAxis:{type:'value'},
+  yAxis:{type:'category', data:DATA.publishers.slice().reverse(), axisLabel:{fontSize:10}},
+  series:[{type:'bar', data:DATA.publisher_counts.slice().reverse(),
+    itemStyle:{color:accent}, label:{show:true, position:'right', fontSize:11}}]
+});
+
+// 词云
+init('chart_wordcloud').setOption({
+  tooltip:{show:true},
+  series:[{type:'wordCloud', gridSize:8, sizeRange:[14,48],
+    rotationRange:[0,0], shape:'circle',
+    textStyle:{color:function(){
+      var palette=['#0a8f5b','#066b44','#e09015','#2f72c4','#54c79a','#6a8caf','#8a63d2'];
+      return palette[Math.floor(Math.random()*palette.length)];
+    }},
+    data: DATA.top_tags.map(function(t){return {name:t[0], value:t[1]};})
+  }]
+});
+
+// LDA 主题
+var topics = document.getElementById('topics');
+DATA.topics.forEach(function(words, i){
+  var div = document.createElement('div');
+  div.className = 'col-md-6 col-lg-4 mb-2';
+  div.innerHTML = '<div class="bg-brand-soft rounded p-2" style="border:1px solid #d3ecdf;"><b class="text-brand">主题 ' + (i+1) +
+    '</b><div class="small mt-1">' + words.map(function(w){return '<span class="tag-badge">'+w+'</span>';}).join('') + '</div></div>';
+  topics.appendChild(div);
+});
+
+window.addEventListener('resize', function(){
+  document.querySelectorAll('.chart').forEach(function(el){
+    var inst = echarts.getInstanceByDom(el); if(inst) inst.resize();
+  });
+});
+</script>
+{% endblock %}

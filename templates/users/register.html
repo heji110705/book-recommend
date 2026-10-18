@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}注册 · 墨韵书荐{% endblock %}
+{% block content %}
+<div class="auth-box">
+  <div class="text-center mb-4">
+    <div style="font-size:2rem;">📖</div>
+    <h2 class="mb-0">注册新账号</h2>
+    <p class="text-muted small mt-1">开启你的个性化阅读之旅</p>
+  </div>
+  <form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label class="form-label">用户名</label>
+      <input type="text" name="username" class="form-control" required autofocus>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">邮箱（选填）</label>
+      <input type="email" name="email" class="form-control">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">密码</label>
+      <input type="password" name="password1" class="form-control" required>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">确认密码</label>
+      <input type="password" name="password2" class="form-control" required>
+    </div>
+    {% if form.errors %}
+      <div class="alert alert-danger small">
+        {% for field in form %}{% for e in field.errors %}<div>{{ e }}</div>{% endfor %}{% endfor %}
+        {% for e in form.non_field_errors %}<div>{{ e }}</div>{% endfor %}
+      </div>
+    {% endif %}
+    <button class="btn btn-brand w-100">注册并登录</button>
+  </form>
+  <div class="text-center mt-3"><small class="text-muted">已有账号？<a href="{% url 'login' %}">直接登录</a></small></div>
+</div>
+{% endblock %}

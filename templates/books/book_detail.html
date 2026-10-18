@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% block title %}{{ book.title }} · 图书详情{% endblock %}
+
+{% block content %}
+<a href="{% url 'book_list' %}" class="text-muted small d-inline-block mt-3">← 返回书库</a>
+
+<div class="card-box">
+  <div class="detail-layout">
+    <!-- 封面 -->
+    <div class="detail-cover">
+      <div class="cover-frame" style="width:260px;">
+        <span class="cover-fallback" style="font-size:2.6rem;">{{ book.title|first }}</span>
+        {% if book.cover %}<img src="{{ book.cover.url }}" alt="{{ book.title }}" onerror="this.remove();">{% endif %}
+      </div>
+    </div>
+
+    <!-- 信息 -->
+    <div class="detail-info">
+      <h1>{{ book.title }}
+        {% if book.subtitle %}<small class="text-muted fs-5">：{{ book.subtitle }}</small>{% endif %}
+      </h1>
+      <div class="detail-meta">
+        <div><span class="k">作者</span>{{ book.author }}</div>
+        <div><span class="k">出版社</span>{{ book.publisher }}{% if book.pub_date %}　<span class="k">出版年</span>{{ book.pub_date }}{% elif book.pub_year %}　<span class="k">出版年</span>{{ book.pub_year }} 年{% endif %}</div>
+        <div><span class="k">分类</span><a class="text-brand" href="{% url 'book_list' %}?category={{ book.category }}">{{ book.category }}</a>
+          {% if book.price %}　<span class="k">定价</span>¥{{ book.price }}{% endif %}
+        </div>
+        {% if book.douban_votes %}<div class="text-muted small">数据来源：豆瓣读书（{{ book.douban_votes }} 人评价）{% if book.subject_id %} · 豆瓣ID {{ book.subject_id }}{% endif %}</div>{% endif %}
+      </div>
+
+      <div class="mb-2">
+        {% for tag in book.tag_list %}<span class="tag-badge">{{ tag }}</span>{% endfor %}
+      </div>
+
+      <!-- 评分框 -->
+      <div class="rating-box">
+        <div class="text-center">
+          <div class="big-score">{{ book.display_rating|floatformat:1 }}</div>
+          <div>{% include "partials/stars.html" with percent=book.star_percent size="md" %}</div>
+          <div class="text-muted small mt-1">{{ book.display_votes }} 人评分</div>
+        </div>
+        <div class="dist">
+          {% for d in star_dist %}
+          <div class="dist-row">
+            <span class="lab">{{ d.label }}</span>
+            <span class="dist-bar"><i style="width:{{ d.pct }}%;"></i></span>
+            <span class="pct">{{ d.pct }}%</span>
+          </div>
+          {% endfor %}
+        </div>
+        <div class="text-center" style="border-left:1px solid #eee;padding-left:24px;">
+          <div class="sentiment-pos" style="font-size:1.5rem;font-weight:800;">{{ book.positive_rate_pct }}%</div>
+          <div class="text-muted small">评论好评率</div>
+          <div class="mt-1" style="font-size:.85rem;" class="text-muted">
+            <span class="sentiment-{% if book.sentiment_score > 0.1 %}pos{% elif book.sentiment_score < -0.1 %}neg{% else %}neu{% endif %}">
+              口碑情感分 {{ book.sentiment_score }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {% if user.is_authenticated %}
+      <form method="post" action="{% url 'toggle_shelf' book.id %}" class="action-row">
+        {% csrf_token %}
+        <button name="status" value="want" class="btn btn-want {% if shelf_status == 'want' %}on{% endif %}">想读</button>
+        <button name="status" value="reading" class="btn btn-want {% if shelf_status == 'reading' %}on{% endif %}">在读</button>
+        <button name="status" value="read" class="btn btn-brand {% if shelf_status == 'read' %}on{% endif %}">读过</button>
+        <button formaction="{% url 'toggle_favorite' book.id %}" class="btn btn-outline-brand">{% if is_favorite %}★ 已收藏{% else %}☆ 收藏{% endif %}</button>
+      </form>
+      <form method="post" action="{% url 'rate_book' book.id %}" class="d-flex align-items-center gap-2 mt-2">
+        {% csrf_token %}
+        <span class="fw-bold small">我的评分：</span>
+        <div class="score-pick">
+          {% for s in '123456789' %}
+          <button type="submit" name="score" value="{{ s }}" class="{% if user_rating == s|add:'0' %}on{% endif %}">{{ s }}</button>
+          {% endfor %}
+          <button type="submit" name="score" value="10" class="{% if user_rating == 10 %}on{% endif %}">10</button>
+        </div>
+        {% if user_rating %}<small class="text-muted ms-2">已评 {{ user_rating }} 分</small>{% endif %}
+      </form>
+      {% else %}
+      <div class="alert alert-info mt-3 mb-0" style="background:var(--brand-light);border-color:#bfe6d6;color:var(--brand-dark);">
+        登录后可评分、加入书架并获得个性化推荐。
+        <a href="{% url 'login' %}" class="btn btn-brand btn-sm ms-2">去登录</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- 简介 -->
+{% if book.quote %}<div class="quote-line">「{{ book.quote }}」</div>{% endif %}
+<div class="card-box">
+  <div class="sec-title"><span class="dot">▎</span>内容简介</div>
+  <div class="desc-text">{{ book.description }}</div>
+</div>
+
+<!-- 同类 -->
+<div class="card-box">
+  <div class="sec-title"><span class="dot">▎</span>同类推荐 · {{ book.category }}</div>
+  <div class="bk-grid" style="grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:16px;">
+    {% for b in similar %}
+    {% include "partials/book_grid_card.html" with book=b %}
+    {% endfor %}
+  </div>
+</div>
+
+<!-- 评论 -->
+<div class="card-box">
+  <div class="sec-title"><span class="dot">▎</span>读者评论（{{ comments|length }} 条 · 自动情感分析）</div>
+  {% if user.is_authenticated %}
+  <form method="post" action="{% url 'add_comment' book.id %}" class="mb-3">
+    {% csrf_token %}
+    <textarea name="content" class="form-control" rows="2" placeholder="写下你的书评，系统将自动进行情感倾向与关键词分析…"></textarea>
+    <button class="btn btn-brand btn-sm mt-2">发表评论</button>
+  </form>
+  {% endif %}
+  {% for c in comments %}
+  <div class="comment-item">
+    <div class="avatar">{{ c.user.username|first|upper }}</div>
+    <div class="body">
+      <div class="head">
+        <span class="name">{{ c.user.username }}</span>
+        <span class="sentiment-{{ c.polarity }}">{{ c.get_polarity_display }} · {{ c.sentiment }}</span>
+      </div>
+      <div class="text">{{ c.content }}</div>
+      {% if c.keywords %}<small class="text-muted">情感关键词：{{ c.keywords }}</small>{% endif %}
+    </div>
+  </div>
+  {% empty %}
+  <p class="text-muted">暂无评论，来写第一条吧。</p>
+  {% endfor %}
+</div>
+{% endblock %}

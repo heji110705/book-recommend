@@ -1,0 +1,66 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}墨韵书荐 · 个性化图书推荐系统{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'vendor/bootstrap.min.css' %}?v=20261018">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v=20261018">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+<header class="topbar">
+  <div class="inner">
+    <a class="brand" href="{% url 'home' %}">
+      <span class="logo">📖</span> 墨韵书荐
+    </a>
+    <nav class="main-nav">
+      <a href="{% url 'home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">首页</a>
+      <a href="{% url 'book_list' %}" class="{% if request.resolver_match.url_name == 'book_list' %}active{% endif %}">书库</a>
+      <a href="{% url 'recommend_page' %}" class="{% if request.resolver_match.url_name == 'recommend_page' %}active{% endif %}">智能推荐</a>
+      <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">数据分析</a>
+    </nav>
+    <form class="top-search" action="{% url 'book_list' %}" method="get">
+      <input type="search" name="q" placeholder="书名 / 作者 / 出版社 / 标签" value="{{ request.GET.q }}">
+      <button type="submit">搜索</button>
+    </form>
+    {% if user.is_authenticated %}
+    <a class="user-chip" href="{% url 'profile' %}">
+      <span class="avatar">{{ user.username|first|upper }}</span>
+      <span>{{ user.username }}</span>
+    </a>
+    <form method="post" action="{% url 'logout' %}" class="d-inline">
+      {% csrf_token %}
+      <button class="btn btn-link btn-sm text-muted p-0" type="submit">退出</button>
+    </form>
+    {% else %}
+    <a href="{% url 'login' %}" class="btn btn-sm btn-outline-brand">登录</a>
+    <a href="{% url 'register' %}" class="btn btn-sm btn-brand">注册</a>
+    {% endif %}
+  </div>
+</header>
+
+<div class="wrap">
+  {% if messages %}
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show mt-3" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+  {% endif %}
+  {% block content %}{% endblock %}
+</div>
+
+<footer class="site-footer">
+  <div class="wrap text-center">
+    <div>基于混合推荐与评论情感分析的个性化图书推荐系统 · 数据科学与大数据技术 · 毕业设计</div>
+    <div class="mt-1">图书数据来源于豆瓣读书 Top250 公开书目（仅用于教学演示）</div>
+  </div>
+</footer>
+
+<script src="{% static 'vendor/bootstrap.bundle.min.js' %}?v=20261018"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

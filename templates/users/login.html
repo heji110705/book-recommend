@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}登录 · 墨韵书荐{% endblock %}
+{% block content %}
+<div class="auth-box">
+  <div class="text-center mb-4">
+    <div style="font-size:2rem;">📖</div>
+    <h2 class="mb-0">登录墨韵书荐</h2>
+    <p class="text-muted small mt-1">登录后即可评分、收藏并获得个性化推荐</p>
+  </div>
+  {% if form.errors %}
+    <div class="alert alert-danger">用户名或密码错误，请重试。</div>
+  {% endif %}
+  <form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label class="form-label">用户名</label>
+      <input type="text" name="username" class="form-control" placeholder="请输入用户名" required autofocus>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">密码</label>
+      <input type="password" name="password" class="form-control" placeholder="请输入密码" required>
+    </div>
+    <input type="hidden" name="next" value="{{ next }}">
+    <button class="btn btn-brand w-100">登 录</button>
+  </form>
+  <div class="text-center mt-3">
+    <small class="text-muted">还没有账号？<a href="{% url 'register' %}">立即注册</a></small>
+    <div class="alert" style="background:var(--brand-light);border-color:#bfe6d6;color:var(--brand-dark);margin-top:16px;font-size:.85rem;">
+      演示账号：<b>demo</b> / <b>demo12345</b>（已有评分与推荐）<br>
+      管理后台：<a href="/admin/">/admin/</a>，<b>admin</b> / <b>admin12345</b>
+    </div>
+  </div>
+</div>
+{% endblock %}

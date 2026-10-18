@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}个人中心 · 墨韵书荐{% endblock %}
+{% block content %}
+<div class="card-box mt-3" style="background:linear-gradient(120deg,var(--brand-light),#fff);">
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div class="d-flex align-items-center gap-3">
+      <div class="avatar" style="width:56px;height:56px;font-size:1.4rem;">{{ user.username|first|upper }}</div>
+      <div>
+        <h4 class="mb-0">{{ user.username }} 的个人中心</h4>
+        <div class="text-muted small mt-1">偏好分类：{{ user.profile.fav_categories }}</div>
+      </div>
+    </div>
+    <a href="{% url 'recommend_page' %}" class="btn btn-brand">查看我的个性化推荐 →</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-2">
+  <div class="col-6 col-md-3"><div class="stat-card"><div class="num">{{ n_ratings }}</div><div class="label">我的评分</div></div></div>
+  <div class="col-6 col-md-3"><div class="stat-card"><div class="num">{{ n_shelf }}</div><div class="label">书架藏书</div></div></div>
+  <div class="col-6 col-md-3"><div class="stat-card"><div class="num">{{ n_favorites }}</div><div class="label">我的收藏</div></div></div>
+  <div class="col-6 col-md-3"><div class="stat-card"><div class="num">{{ n_clicks }}</div><div class="label">浏览记录</div></div></div>
+</div>
+
+<ul class="nav nav-tabs mt-3" id="myTab" role="tablist">
+  <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#shelf" type="button">我的书架（{{ n_shelf }}）</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#ratings" type="button">我的评分（{{ n_ratings }}）</button></li>
+  <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#fav" type="button">我的收藏（{{ n_favorites }}）</button></li>
+</ul>
+<div class="card-box" style="border-top:none;border-radius:0 0 14px 14px;">
+  <div class="tab-content">
+    <!-- 书架 -->
+    <div class="tab-pane fade show active" id="shelf">
+      <h6 class="fw-bold mt-1">📖 在读（{{ shelves.reading|length }}）</h6>
+      <div class="bk-grid mb-4" style="grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:14px;">
+        {% for item in shelves.reading %}{% include "partials/book_grid_card.html" with book=item.book %}{% empty %}<span class="text-muted small">暂无</span>{% endfor %}
+      </div>
+      <h6 class="fw-bold">✅ 读过（{{ shelves.read|length }}）</h6>
+      <div class="bk-grid mb-4" style="grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:14px;">
+        {% for item in shelves.read %}{% include "partials/book_grid_card.html" with book=item.book %}{% empty %}<span class="text-muted small">暂无</span>{% endfor %}
+      </div>
+      <h6 class="fw-bold">📌 想读（{{ shelves.want|length }}）</h6>
+      <div class="bk-grid" style="grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:14px;">
+        {% for item in shelves.want %}{% include "partials/book_grid_card.html" with book=item.book %}{% empty %}<span class="text-muted small">暂无</span>{% endfor %}
+      </div>
+    </div>
+    <!-- 评分 -->
+    <div class="tab-pane fade" id="ratings">
+      <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead><tr><th>图书</th><th>分类</th><th>我的评分</th><th>时间</th></tr></thead>
+        <tbody>
+          {% for r in ratings %}
+          <tr>
+            <td><a href="{% url 'book_detail' r.book.id %}">{{ r.book.title }}</a></td>
+            <td class="small">{{ r.book.category }}</td>
+            <td><span class="text-brand fw-bold">{{ r.score }}</span> / 10</td>
+            <td class="small text-muted">{{ r.created_at|date:'Y-m-d' }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="text-center text-muted py-4">还没有评分，去书库看看吧。</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+    <!-- 收藏 -->
+    <div class="tab-pane fade" id="fav">
+      <div class="bk-grid" style="grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:14px;">
+        {% for f in favorites %}{% include "partials/book_grid_card.html" with book=f.book %}{% empty %}<span class="text-muted small">还没有收藏。</span>{% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

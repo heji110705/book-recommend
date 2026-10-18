@@ -1,0 +1,28 @@
+# 虚拟环境
+venv/
+.venv/
+env/
+# Python 缓存
+__pycache__/
+*.py[cod]
+*.egg-info/
+# 静态收集目录（容器内重新 collect）
+static_collected/
+# 本地辅助资料
+_ref/
+screenshots/
+docs/
+*.md
+!README.md
+# 编辑器 / 系统
+.git/
+.gitignore
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+# 日志
+*.log
+# 数据脚本原始下载（镜像里保留 data/douban_top250.json 与 scraper）
+data/*.html
+data/covers_raw/

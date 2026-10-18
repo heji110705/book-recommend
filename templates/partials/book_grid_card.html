@@ -1,0 +1,16 @@
+<div class="bk-item">
+  {% include "partials/cover.html" with book=book %}
+  <div class="meta">
+    <a href="{% url 'book_detail' book.id %}"><div class="t two">{{ book.title }}</div></a>
+    <div class="a">{{ book.author }} · {{ book.category }}</div>
+    <div class="r">
+      {% if book.display_rating %}
+      <span class="num">{{ book.display_rating|floatformat:1 }}</span>
+      {% include "partials/stars.html" with percent=book.star_percent %}
+      {% if show_people %}<span class="pp">{{ book.display_votes }} 人评</span>{% endif %}
+      {% else %}
+      <span class="pp">暂无评分</span>
+      {% endif %}
+    </div>
+  </div>
+</div>

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}智能推荐 · 墨韵书荐{% endblock %}
+{% block content %}
+<div class="section-bar"><h2>✨ 为你推荐</h2></div>
+<p class="text-muted" style="margin-top:-6px;">综合你的评分、书架与浏览记录，结合多种推荐算法与图书口碑，生成个性化书单，并给出每条推荐的理由。</p>
+
+{% if needs_onboarding %}
+<div class="card-box" style="background:linear-gradient(120deg,var(--brand-light),#fff);border-color:#9fd6bf;">
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div>
+      <b>👋 第一次来？先选几个你感兴趣的方向</b>
+      <div class="text-muted small mt-1">完成 30 秒兴趣引导，获得更合口味的冷启动书单。</div>
+    </div>
+    <a href="{% url 'onboarding' %}" class="btn btn-brand">去选择兴趣 →</a>
+  </div>
+</div>
+{% elif cold %}
+<div class="alert alert-warning" style="background:#fdf6e3;border-color:#f0e0a8;color:#9a7b1f;">
+  {{ notice }}
+</div>
+{% endif %}
+
+<div class="card-box">
+  <div class="algo-tabs">
+    {% for key, label in algo_labels.items %}
+      {% if key == 'hot' or key in personal_algos %}
+      <a href="?algo={{ key }}" class="{% if algo == key %}cur{% endif %}">{{ label }}</a>
+      {% endif %}
+    {% endfor %}
+  </div>
+  <div class="algo-desc">
+    当前算法：<b class="text-brand">{{ algo_label }}</b>
+    {% if not cold %} · 已为你完成 {{ rec_books|length }} 本个性化推荐（已过滤你评分过的书）{% endif %}
+  </div>
+</div>
+
+{% if rec_books %}
+<div class="bk-grid">
+  {% for item in rec_books %}
+  <div class="bk-item">
+    <div style="position:relative;">
+      {% include "partials/cover.html" with book=item.book %}
+      <span style="position:absolute;top:8px;left:8px;z-index:2;background:rgba(10,143,91,.92);color:#fff;font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:5px;">推荐度 {{ item.score|floatformat:0 }}%</span>
+    </div>
+    <div class="meta">
+      <a href="{% url 'book_detail' item.book.id %}"><div class="t two">{{ item.book.title }}</div></a>
+      <div class="a">{{ item.book.author }} · {{ item.book.category }}</div>
+      <div class="r">
+        <span class="num">{{ item.book.display_rating|floatformat:1 }}</span>
+        {% include "partials/stars.html" with percent=item.book.star_percent %}
+      </div>
+      <div class="reason" title="{{ item.reason }}">💡 {{ item.reason }}</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-tip">暂无可推荐图书，请先对一些图书评分。</div>
+{% endif %}
+
+<div class="card-box">
+  <div class="sec-title"><span class="dot">▎</span>五种推荐算法说明</div>
+  <ul class="text-muted mb-0" style="line-height:1.9;font-size:.92rem;">
+    <li><b class="text-brand">混合推荐（默认）</b>：以 TF-IDF 内容相似度为主体，按你的评分密度自适应引入 SVD 协同信号；评分越少越依赖口碑兜底，评分越多越信任协同。离线多组评估中，在准确率、覆盖率与评分误差之间综合最优。</li>
+    <li><b>SVD 矩阵分解</b>：从评分矩阵中学习读者与图书的隐因子，预测你对未评分图书的评分。</li>
+    <li><b>基于内容</b>：依据标签、简介的 TF-IDF 文本相似度，推荐风格与你喜欢的书相近的书。</li>
+    <li><b>UserCF / ItemCF</b>：基于相似读者的偏好（用户协同）或相似图书的评分（物品协同）做推荐。</li>
+    <li><b>热门口碑</b>：综合评分人数、均分与口碑情感分，冷启动时兜底推荐。</li>
+  </ul>
+</div>
+
+<style>
+.reason{
+  margin-top:6px;font-size:.74rem;line-height:1.35;color:#4a7a63;
+  background:var(--brand-light);border-radius:6px;padding:5px 7px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:34px;
+}
+</style>
+{% endblock %}

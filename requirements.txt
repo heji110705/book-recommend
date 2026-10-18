@@ -1,0 +1,13 @@
+# 基于混合推荐与评论情感分析的个性化图书推荐系统 —— 运行依赖
+# Python 3.10+（开发环境为 Python 3.13）
+
+Django==5.2.18
+pandas==3.0.6
+numpy==2.5.4
+scikit-learn==1.9.1
+jieba==0.42.1
+pillow==13.0.0
+matplotlib==3.11.2
+requests==2.34.2
+beautifulsoup4==4.15.0
+lxml==6.1.3

@@ -1,0 +1,21 @@
+# Render 一键部署蓝图（免费 Web Service）
+# 用法：在 Render 控制台选 "New → Blueprint"，连接你 push 了本项目的 GitHub 仓库即可。
+# 文档：https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: book-recommend
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12"
+      - key: ALLOWED_HOSTS
+        value: "*"
+      - key: SECRET_KEY
+        generateValue: true
+      # 部署后如需绑定自己的域名并启用 HTTPS，再补充：
+      # - key: CSRF_ORIGINS
+      #   value: https://your-app.onrender.com

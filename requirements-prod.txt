@@ -1,0 +1,4 @@
+# 生产部署额外依赖（在 requirements.txt 基础上安装）
+gunicorn>=22.0
+whitenoise>=6.7
+psycopg2-binary>=2.9

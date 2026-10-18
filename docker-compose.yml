@@ -1,0 +1,27 @@
+# -*- coding: utf-8 -*-
+# 一键启动：docker compose up -d --build
+# 访问 http://服务器IP:8000
+services:
+  web:
+    build: .
+    image: book-recommend:latest
+    container_name: book-recommend
+    ports:
+      - "8000:8000"
+    environment:
+      - SECRET_KEY=change-me-to-a-random-secret-key
+      - ALLOWED_HOSTS=*
+      # 若部署到域名并启用 HTTPS，补充下方两项：
+      # - CSRF_ORIGINS=https://your-domain.com
+      # - ENABLE_HTTPS=1
+    volumes:
+      - media_data:/app/media
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  media_data:

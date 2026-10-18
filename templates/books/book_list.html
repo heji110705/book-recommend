@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}书库 · 墨韵书荐{% endblock %}
+
+{% block content %}
+<div class="section-bar">
+  <h2>{% if q %}搜索“{{ q }}”{% elif category %}{{ category }}{% else %}全部书库{% endif %}</h2>
+  <span class="tabs">
+    <a href="?order=hot{% if category %}&category={{ category }}{% endif %}{% if q %}&q={{ q }}{% endif %}" class="{% if order == 'hot' %}cur{% endif %}">最热</a>
+    <a href="?order=rating{% if category %}&category={{ category }}{% endif %}{% if q %}&q={{ q }}{% endif %}" class="{% if order == 'rating' %}cur{% endif %}">评分最高</a>
+    <a href="?order=new{% if category %}&category={{ category }}{% endif %}{% if q %}&q={{ q }}{% endif %}" class="{% if order == 'new' %}cur{% endif %}">最新出版</a>
+    <a href="?order=price{% if category %}&category={{ category }}{% endif %}{% if q %}&q={{ q }}{% endif %}" class="{% if order == 'price' %}cur{% endif %}">价格</a>
+  </span>
+</div>
+
+<div class="row">
+  <div class="col-lg-9">
+    <div class="cat-pills">
+      <a href="{% url 'book_list' %}?order={{ order }}{% if q %}&q={{ q }}{% endif %}" class="{% if not category %}cur{% endif %}">全部</a>
+      {% for c, n in categories %}
+      <a href="?category={{ c }}&order={{ order }}{% if q %}&q={{ q }}{% endif %}" class="{% if category == c %}cur{% endif %}">{{ c }} · {{ n }}</a>
+      {% endfor %}
+    </div>
+
+    {% if q or category %}<p class="text-muted small">共找到 <b>{{ page_obj.paginator.count }}</b> 本图书 · <a href="{% url 'book_list' %}">清除筛选</a></p>{% endif %}
+
+    {% if books %}
+    <div class="bk-grid">
+      {% for book in books %}{% include "partials/book_grid_card.html" with book=book show_people=1 %}{% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-tip">没有找到匹配的图书，换个关键词试试吧～</div>
+    {% endif %}
+
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav class="mt-4">
+      <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&category={{ category }}&order={{ order }}{% if q %}&q={{ q }}{% endif %}">上一页</a></li>
+        {% endif %}
+        <li class="page-item active"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+        {% if page_obj.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&category={{ category }}&order={{ order }}{% if q %}&q={{ q }}{% endif %}">下一页</a></li>
+        {% endif %}
+      </ul>
+    </nav>
+    {% endif %}
+  </div>
+
+  <div class="col-lg-3">
+    <div class="side-box">
+      <h3>豆瓣高分榜 <a href="?order=rating">更多»</a></h3>
+      <ol class="rank-list">
+        {% for book in rank_side %}
+        <li>
+          <span class="n {% if forloop.counter <= 3 %}t{{ forloop.counter }}{% endif %}">{{ forloop.counter }}</span>
+          <a class="t" href="{% url 'book_detail' book.id %}">{{ book.title }}</a>
+          <span class="s">{{ book.douban_rating|floatformat:1 }}</span>
+        </li>
+        {% endfor %}
+      </ol>
+    </div>
+  </div>
+</div>
+{% endblock %}
